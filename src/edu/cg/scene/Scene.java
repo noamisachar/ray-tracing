@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -180,22 +182,136 @@ public class Scene {
 	
 	private Future<Color> calcColor(int x, int y) {
 		return executor.submit(() -> {
-			Point pointOnScreen = camera.transform(x, y);
-			Vec color = new Vec(0.0);
-
-			Ray ray = new Ray(camera.getCameraPosition(), pointOnScreen);
-			color = color.add(calcColor(ray, 0));
-
-			return color.toColor();
-			// TODO: change this method for AntiAliasing bonus
-			//		You need to shoot antiAliasingFactor-1 additional rays through the pixel return the average color of
-			//      all rays.
-		});
+            Vec color = new Vec(0,0,0);
+            for (int i = 0; i < antiAliasingFactor ; i++) {
+                for (int j = 0; j < antiAliasingFactor ; j++) {
+                    Point centerPoint = camera.transform(x * antiAliasingFactor + i, y * antiAliasingFactor + j);
+                    Ray ray = new Ray(camera.getCameraPosition(), centerPoint);
+                    color = color.add(calcColor(ray, 0));
+                }
+            }
+            return color.mult(1.0 / Math.pow(this.antiAliasingFactor, 2)).toColor();
+        });
 	}
 	
 	private Vec calcColor(Ray ray, int recursionLevel) {
-		// TODO: implement this method to support ray tracing
-		// 		This is the first call to ray ray-tracing
-		throw new UnimplementedMethodException("edu.cg.scene.Scene.calcColor");
+		if (recursionLevel == maxRecursionLevel) {
+            return new Vec();
+        }
+
+        Optional<Hit> optHit = findIntersection(ray);
+        if (optHit.isEmpty()) {
+            // No intersection, returing bgcolor
+            return this.backgroundColor;
+        }
+
+        Hit hit = optHit.get();
+        // Calculate ambient color for vector, K_a * I_{amb}
+        Point surfaceHitPoint = ray.getHittingPoint(hit);
+        Surface surface = hit.getSurface();
+        Vec color = surface.Ka().mult(this.ambient);
+
+        for (Light lightSource :
+                lightSources) {
+
+            // is occluded, continue
+            if (isOccluded(surfaceHitPoint, lightSource)) continue;
+
+            color = color.add(
+                    getColorToAdd(ray,
+                            hit,
+                            surfaceHitPoint,
+                            lightSource));
+        }
+
+        if (renderReflections && surface.isReflecting()) {
+
+            Ray reflectedRay = new Ray(
+                    surfaceHitPoint,
+                    Ops.reflect(ray.direction(), hit.getNormalToSurface())
+            );
+
+            color = color.add(
+                    calcColor(reflectedRay, recursionLevel + 1));
+        }
+
+        if (renderRefractions && surface.isTransparent()) {
+
+            Ray refractedRay = new Ray(
+                    surfaceHitPoint,
+                    Ops.refract(ray.direction(),
+                            hit.getNormalToSurface(),
+                            surface.n1(hit), surface.n2(hit))
+            );
+
+            color = color.add(
+                    calcColor(refractedRay, recursionLevel + 1));
+
+        }
+        return color;
 	}
+
+	private Vec getColorToAdd (Ray ray, Hit hit, Point surfaceHitPoint, Light lightSource) {
+        Ray rayToLight = lightSource.rayToLight(surfaceHitPoint);
+
+        Vec directionToLight =
+                rayToLight.direction();
+
+        // calc diffused: K_D * (N * L_i)
+        Vec colorToAdd = calcDiffused(directionToLight, hit);
+
+        // calc specular: K_S * ( V * R_i)^n
+        colorToAdd = colorToAdd.add(calcSpecular(ray, directionToLight, hit));
+
+        // add intensity: (specular + diffused) * I_L_i
+        colorToAdd = lightSource.intensity(surfaceHitPoint, rayToLight).mult(colorToAdd);
+
+        return colorToAdd;
+    }
+
+    private Vec calcSpecular (Ray ray, Vec directionToLight, Hit hit) {
+
+        Vec normal = hit.getNormalToSurface();
+
+        // We take the ray from the point to the light source (L.neg()) and
+        // reflect it
+        Vec reflectedLightToViewerDirection = Ops.reflect(
+                directionToLight.neg(),
+                normal);
+
+        Vec toViewer = ray.direction().neg();
+
+        Vec Ks = hit.getSurface().Ks();
+        int shininess = hit.getSurface().shininess();
+
+        double cosine = reflectedLightToViewerDirection.dot(toViewer);
+
+        // If the angle is greater than 90 degrees, the light
+        // doesn't get to the viewer so we return 0
+        return cosine > 0.0 ?
+                Ks.mult(Math.pow(cosine, shininess))
+                : new Vec();
+    }
+
+    private Vec calcDiffused (Vec directionToLight, Hit hit) {
+        Vec normal = hit.getNormalToSurface();
+
+        Vec Kd = hit.getSurface().Kd();
+
+        // If the angle is greater than 90 degrees (N * L < 0), the light
+        // doesn't hit the surface so we return 0
+        return Kd.mult(Math.max(directionToLight.dot(normal), 0.0));
+    }
+
+    private boolean isOccluded (Point hitPoint, Light lightSource) {
+        Ray rayToLight = lightSource.rayToLight(hitPoint);
+        return surfaces.stream().anyMatch(surface -> lightSource.isOccludedBy(surface, rayToLight));
+    }
+
+    private Optional<Hit> findIntersection (Ray ray) {
+        return surfaces.stream().
+                map(surface -> surface.intersect(ray)).
+                filter(Objects::nonNull).
+                min(Hit::compareTo);
+    }
 }

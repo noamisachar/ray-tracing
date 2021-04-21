@@ -35,19 +35,16 @@ public class DirectionalLight extends Light {
 	
 	@Override
 	public Ray rayToLight(Point fromPoint) {
-		// TODO Implement:
-		throw new UnimplementedMethodException("edu.cg.scene.lightSources.DirectionalLight.rayToLight()");
+		return new Ray(fromPoint, direction.neg());
 	}
 
 	@Override
 	public boolean isOccludedBy(Surface surface, Ray rayToLight) {
-		// TODO Implement:
-		throw new UnimplementedMethodException("edu.cg.scene.lightSources.DirectionalLight.isOccludedBy()");
+		return surface.intersect(rayToLight) != null;
 	}
 
 	@Override
 	public Vec intensity(Point hittingPoint, Ray rayToLight) {
-		// TODO Implement:
-		throw new UnimplementedMethodException("edu.cg.scene.lightSources.DirectionalLight.intensity()");
+		return this.intensity;
 	}
 }

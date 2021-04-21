@@ -56,8 +56,9 @@ public class PinholeCamera {
 	 * @return the middle point of the pixel (x,y) in the model coordinates.
 	 */
 	public Point transform(int x, int y) {
-		// TODO Implement this function
-		throw new UnimplementedMethodException("edu.cg.scene.camera.PinholeCamera.transform(int x, int y)");
+		return centerPoint.
+				add(rightVec.mult((x - centerPoint.x) * (this.planeWidth/resX))).
+				add(upVec.mult((centerPoint.y - y) * (this.planeWidth/resX)));
 	}
 	
 	/**
