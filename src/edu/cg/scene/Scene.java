@@ -4,15 +4,12 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import edu.cg.Logger;
-import edu.cg.UnimplementedMethodException;
 import edu.cg.algebra.Hit;
 import edu.cg.algebra.Ops;
 import edu.cg.algebra.Point;
@@ -128,13 +125,9 @@ public class Scene {
 	private transient ExecutorService executor = null;
 	private transient Logger logger = null;
 
-	// TODO: add your fields here with the transient keyword
-	//  for example - private transient Object myField = null;
 
 	private void initSomeFields(int imgWidth, int imgHeight, double planeWidth, Logger logger) {
 		this.logger = logger;
-		// TODO: initialize your fields that you added to this class here.
-		//      Make sure your fields are declared with the transient keyword
 	}
 	
 	
@@ -181,31 +174,36 @@ public class Scene {
 	}
 	
 	private Future<Color> calcColor(int x, int y) {
-		return executor.submit(() -> {
-            Vec color = new Vec(0,0,0);
-            for (int i = 0; i < antiAliasingFactor ; i++) {
-                for (int j = 0; j < antiAliasingFactor ; j++) {
-                    Point centerPoint = camera.transform(x * antiAliasingFactor + i, y * antiAliasingFactor + j);
-                    Ray ray = new Ray(camera.getCameraPosition(), centerPoint);
-                    color = color.add(calcColor(ray, 0));
-                }
+        return this.executor.submit(() -> {
+            Point pointOnScreen = this.camera.transform(x, y);
+            Vec color = new Vec(0.0);
+            Ray ray = new Ray(this.camera.getCameraPosition(), pointOnScreen);
+            Vec color2 = color.add(this.calcColor(ray, 0));
+            double pixelLength = this.camera.getPixelLength();
+            Vec upVec = this.camera.getUpVec();
+            Vec rightVec = this.camera.getRightVec();
+            for (int i = 0; i < this.antiAliasingFactor - 1; ++i) {
+                double dx = (Math.random() - 0.5) * pixelLength;
+                double dy = (Math.random() - 0.5) * pixelLength;
+                Point newPoint = pointOnScreen.add(rightVec.mult(dx)).add(upVec.mult(dy));
+                Ray ray2 = new Ray(this.camera.getCameraPosition(), newPoint);
+                color2 = color2.add(this.calcColor(ray2, 0));
             }
-            return color.mult(1.0 / Math.pow(this.antiAliasingFactor, 2)).toColor();
+            return color2.mult(1.0 / this.antiAliasingFactor).toColor();
         });
 	}
 	
 	private Vec calcColor(Ray ray, int recursionLevel) {
-		if (recursionLevel == maxRecursionLevel) {
+		if (recursionLevel > maxRecursionLevel) {
             return new Vec();
         }
 
-        Optional<Hit> optHit = findIntersection(ray);
-        if (optHit.isEmpty()) {
+        Hit hit = findIntersection(ray);
+        if (hit == null) {
             // No intersection, returing bgcolor
             return this.backgroundColor;
         }
 
-        Hit hit = optHit.get();
         // Calculate ambient color for vector, K_a * I_{amb}
         Point surfaceHitPoint = ray.getHittingPoint(hit);
         Surface surface = hit.getSurface();
@@ -308,10 +306,14 @@ public class Scene {
         return surfaces.stream().anyMatch(surface -> lightSource.isOccludedBy(surface, rayToLight));
     }
 
-    private Optional<Hit> findIntersection (Ray ray) {
-        return surfaces.stream().
-                map(surface -> surface.intersect(ray)).
-                filter(Objects::nonNull).
-                min(Hit::compareTo);
+    private Hit findIntersection (Ray ray) {
+        Hit minHit = null;
+        for (final Surface surface : this.surfaces) {
+            final Hit newHit = surface.intersect(ray);
+            if (minHit == null || (newHit != null && newHit.compareTo(minHit) < 0)) {
+                minHit = newHit;
+            }
+        }
+        return minHit;
     }
 }

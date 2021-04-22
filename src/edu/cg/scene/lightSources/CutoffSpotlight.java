@@ -1,7 +1,5 @@
 package edu.cg.scene.lightSources;
 
-import edu.cg.UnimplementedMethodException;
-import edu.cg.algebra.Ops;
 import edu.cg.algebra.Point;
 import edu.cg.algebra.Ray;
 import edu.cg.algebra.Vec;

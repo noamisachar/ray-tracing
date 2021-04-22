@@ -94,8 +94,24 @@ public class Ops {
 	}
 	
 	public static Vec refract(Vec u, Vec normal, double n1, double n2) {
-		//TODO: Bonus implementation
-		// Snell's law: n1*sin(theta1) = n2*sin(theta2)
-		return null;
+		if (n1 == n2) {
+            return u;
+        }
+        double dot = dot(neg(u), normal);
+        dot *= dot;
+        if (n1 > n2) {
+            double criticalAngle = n2 / n1;
+            criticalAngle *= criticalAngle;
+            if (1.0 - dot >= criticalAngle) {
+                return reflect(u, normal);
+            }
+        }
+        Vec b = add(u, mult(dot(neg(u), normal), normal));
+        b = normalize(b);
+        final double sin2Theta2 = n1 * n1 * (1.0 - dot) / (n2 * n2);
+        final double cos2Theta2 = 1.0 - sin2Theta2;
+        final double sinTheta2 = Math.sqrt(sin2Theta2);
+        final double cosTheta2 = Math.sqrt(cos2Theta2);
+        return add(mult(-cosTheta2, normal), mult(sinTheta2, b));
 	}
 }

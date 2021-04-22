@@ -1,10 +1,8 @@
 package edu.cg.scene.objects;
 
-import edu.cg.UnimplementedMethodException;
 import edu.cg.algebra.*;
 
 
-// TODO Implement this class which represents an axis aligned box
 public class AxisAlignedBox extends Shape{
     private final static int NDIM=3; // Number of dimensions
     private Point a = null;
@@ -44,7 +42,7 @@ public class AxisAlignedBox extends Shape{
     private int findMinDim(final double[] vals) {
         double minVal = vals[0];
         int minDim = 0;
-        for (int dim = 1; dim < 3; ++dim) {
+        for (int dim = 1; dim < NDIM; ++dim) {
             if (vals[dim] < minVal) {
                 minDim = dim;
                 minVal = vals[dim];
@@ -56,7 +54,7 @@ public class AxisAlignedBox extends Shape{
     private int findMaxDim(final double[] vals) {
         double minVal = vals[0];
         int minDim = 0;
-        for (int dim = 1; dim < 3; ++dim) {
+        for (int dim = 1; dim < NDIM; ++dim) {
             if (vals[dim] > minVal) {
                 minDim = dim;
                 minVal = vals[dim];
@@ -71,7 +69,7 @@ public class AxisAlignedBox extends Shape{
         final boolean[] shouldNegateNormal = new boolean[3];
         final Point p = ray.source();
         final Vec v = ray.direction();
-        for (int dim = 0; dim < 3; ++dim) {
+        for (int dim = 0; dim < NDIM; ++dim) {
             final double vdim = v.getCoordinate(dim);
             final double pdim = p.getCoordinate(dim);
             if (Math.abs(vdim) <= 1.0E-5) {
