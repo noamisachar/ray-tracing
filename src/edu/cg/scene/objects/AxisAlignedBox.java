@@ -4,7 +4,7 @@ import edu.cg.algebra.*;
 
 
 public class AxisAlignedBox extends Shape{
-    private final static int NDIM=3; // Number of dimensions
+    private final static int NDIM = 3; // Number of dimensions
     private Point a = null;
     private Point b = null;
     private double[] aAsArray;
@@ -65,58 +65,56 @@ public class AxisAlignedBox extends Shape{
     
     @Override
     public Hit intersect(final Ray ray) {
-        final double[][] intervals = new double[2][3];
-        final boolean[] shouldNegateNormal = new boolean[3];
-        final Point p = ray.source();
-        final Vec v = ray.direction();
+        double[][] intervals = new double[2][3];
+        boolean[] negate = new boolean[3];
+        Point p = ray.source();
+        Vec v = ray.direction();
         for (int dim = 0; dim < NDIM; ++dim) {
-            final double vdim = v.getCoordinate(dim);
-            final double pdim = p.getCoordinate(dim);
-            if (Math.abs(vdim) <= 1.0E-5) {
-                if (pdim <= this.aAsArray[dim] || pdim >= this.bAsArray[dim]) {
+            double vDim = v.getCoordinate(dim);
+            double pDim = p.getCoordinate(dim);
+            if (Math.abs(vDim) <= 0.00001) {
+                if (pDim <= this.aAsArray[dim] || pDim >= this.bAsArray[dim]) 
                     return null;
-                }
+                
                 intervals[0][dim] = Double.NEGATIVE_INFINITY;
                 intervals[1][dim] = Double.POSITIVE_INFINITY;
             }
             else {
-                final double t1 = (this.aAsArray[dim] - pdim) / vdim;
-                final double t2 = (this.bAsArray[dim] - pdim) / vdim;
-                if (t1 <= 1.0E-5 || (t2 > 1.0E-5 && t2 < t1)) {
-                    shouldNegateNormal[dim] = true;
-                }
-                else {
-                    shouldNegateNormal[dim] = false;
-                }
+                double t1 = (this.aAsArray[dim] - pDim) / vDim;
+                double t2 = (this.bAsArray[dim] - pDim) / vDim;
+                if (t1 <= 0.00001 || (t2 > 0.00001 && t2 < t1)) 
+                    negate[dim] = true;                
+                else 
+                    negate[dim] = false;
+                    
                 intervals[0][dim] = Math.min(t1, t2);
                 intervals[1][dim] = Math.max(t1, t2);
             }
         }
-        final int dim2 = this.findMaxDim(intervals[0]);
-        final int dim3 = this.findMinDim(intervals[1]);
-        double minT = intervals[0][dim2];
-        final double maxT = intervals[1][dim3];
-        if (minT > maxT || maxT <= 1.0E-5) {
+        int maxDim = this.findMaxDim(intervals[0]);
+        int minDim = this.findMinDim(intervals[1]);
+        double minInt = intervals[0][maxDim];
+        double maxInt = intervals[1][minDim];
+        
+        if (minInt > maxInt || maxInt <= 0.00001) 
             return null;
-        }
+
         boolean isWithin;
         Vec normal;
-        if (minT > 1.0E-5) {
+        if (minInt > 0.00001) {
             isWithin = false;
-            normal = this.getDimNormal(dim2).neg();
-            if (shouldNegateNormal[dim2]) {
+            normal = this.getDimNormal(maxDim).neg();
+            if (negate[maxDim])
                 normal = normal.neg();
-            }
         }
         else {
-            minT = maxT;
+            minInt = maxInt;
             isWithin = true;
-            normal = this.getDimNormal(dim3);
-            if (shouldNegateNormal[dim3]) {
+            normal = this.getDimNormal(minDim);
+            if (negate[minDim]) 
                 normal = normal.neg();
-            }
         }
-        return new Hit(minT, normal).setIsWithin(isWithin);
+        return new Hit(minInt, normal).setIsWithin(isWithin);
     }
     
     private Vec getDimNormal(final int dim) {

@@ -55,14 +55,14 @@ public class PinholeCamera {
 	 * @return the middle point of the pixel (x,y) in the model coordinates.
 	 */
 	public Point transform(int x, int y) {
-		final double pixelHeight;
-        final double pixelWidth = pixelHeight = this.planeWidth / this.resX;
-        final double upDistance = (y - (int)(this.resY / 2.0)) * pixelHeight * -1.0;
-        final double rightDistance = (x - (int)(this.resX / 2.0)) * pixelWidth;
-        final Vec upMovement = this.upVec.mult(upDistance);
-        final Vec rightMovement = this.rightVec.mult(rightDistance);
-        final Point fovPoint = this.centerPoint.add(upMovement).add(rightMovement);
-        return fovPoint;
+		double pixelHeight;
+        double pixelWidth = pixelHeight = this.planeWidth / this.resX;
+        double up = (y - (int)(this.resY / 2.0)) * pixelHeight * -1.0;
+        double right = (x - (int)(this.resX / 2.0)) * pixelWidth;
+        Vec moveUp = this.upVec.mult(up);
+        Vec moveRight = this.rightVec.mult(right);
+        Point fov = this.centerPoint.add(moveUp).add(moveRight);
+        return fov;
 	}
 	
 	/**
