@@ -2,9 +2,12 @@ package edu.cg.scene.objects;
 
 import edu.cg.algebra.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 
 public class AxisAlignedBox extends Shape{
-    private final static int NDIM = 3; // Number of dimensions
+    private final static int NDIM=3; // Number of dimensions
     private Point a = null;
     private Point b = null;
     private double[] aAsArray;
@@ -39,99 +42,44 @@ public class AxisAlignedBox extends Shape{
         return this;
     }
 
-    private int findMinDim(final double[] vals) {
-        double minVal = vals[0];
-        int minDim = 0;
-        for (int dim = 1; dim < NDIM; ++dim) {
-            if (vals[dim] < minVal) {
-                minDim = dim;
-                minVal = vals[dim];
-            }
+    private Plain[] getFaces() {
+        Plain[] faces = new Plain[6];
+        Vec[] unitVectors  = new Vec[] {
+            new Vec(1, 0 ,0), new Vec(0, 1, 0), new Vec(0 ,0 ,1)
+        };
+        int idx = 0;
+        for (Vec normal : unitVectors) {
+            faces[idx++] = new Plain(normal, a);
+            faces[idx++] = new Plain(normal, b);
         }
-        return minDim;
+        return faces;
     }
-    
-    private int findMaxDim(final double[] vals) {
-        double minVal = vals[0];
-        int minDim = 0;
-        for (int dim = 1; dim < NDIM; ++dim) {
-            if (vals[dim] > minVal) {
-                minDim = dim;
-                minVal = vals[dim];
-            }
-        }
-        return minDim;
-    }
-    
-    @Override
-    public Hit intersect(final Ray ray) {
-        double[][] intervals = new double[2][3];
-        boolean[] negate = new boolean[3];
-        Point p = ray.source();
-        Vec v = ray.direction();
-        for (int dim = 0; dim < NDIM; ++dim) {
-            double vDim = v.getCoordinate(dim);
-            double pDim = p.getCoordinate(dim);
-            if (Math.abs(vDim) <= 0.00001) {
-                if (pDim <= this.aAsArray[dim] || pDim >= this.bAsArray[dim]) 
-                    return null;
-                
-                intervals[0][dim] = Double.NEGATIVE_INFINITY;
-                intervals[1][dim] = Double.POSITIVE_INFINITY;
-            }
-            else {
-                double t1 = (this.aAsArray[dim] - pDim) / vDim;
-                double t2 = (this.bAsArray[dim] - pDim) / vDim;
-                if (t1 <= 0.00001 || (t2 > 0.00001 && t2 < t1)) 
-                    negate[dim] = true;                
-                else 
-                    negate[dim] = false;
-                    
-                intervals[0][dim] = Math.min(t1, t2);
-                intervals[1][dim] = Math.max(t1, t2);
-            }
-        }
-        int maxDim = this.findMaxDim(intervals[0]);
-        int minDim = this.findMinDim(intervals[1]);
-        double minInt = intervals[0][maxDim];
-        double maxInt = intervals[1][minDim];
-        
-        if (minInt > maxInt || maxInt <= 0.00001) 
-            return null;
 
-        boolean isWithin;
-        Vec normal;
-        if (minInt > 0.00001) {
-            isWithin = false;
-            normal = this.getDimNormal(maxDim).neg();
-            if (negate[maxDim])
-                normal = normal.neg();
-        }
-        else {
-            minInt = maxInt;
-            isWithin = true;
-            normal = this.getDimNormal(minDim);
-            if (negate[minDim]) 
-                normal = normal.neg();
-        }
-        return new Hit(minInt, normal).setIsWithin(isWithin);
+    private boolean isInBox(Ray ray, Hit hit) {
+        Point point = ray.getHittingPoint(hit);
+        double x = point.x ;
+        double y = point.y ;
+        double z = point.z ;
+        boolean isInX = a.x <= x + Ops.epsilon && b.x >= x - Ops.epsilon;
+        boolean isInY = a.y <= y + Ops.epsilon && b.y >= y - Ops.epsilon;
+        boolean isInZ = a.z <= z + Ops.epsilon && b.z >= z - Ops.epsilon;
+        return isInX && isInY && isInZ;
     }
-    
-    private Vec getDimNormal(final int dim) {
-        switch (dim) {
-            case 0: {
-                return new Vec(1.0, 0.0, 0.0);
-            }
-            case 1: {
-                return new Vec(0.0, 1.0, 0.0);
-            }
-            case 2: {
-                return new Vec(0.0, 0.0, 1.0);
-            }
-            default: {
-                return null;
+
+    @Override
+    public Hit intersect(Ray ray) {
+        Plain[] faces = getFaces();
+        Hit min = null;
+        for (Plain face : faces) {
+            Hit hit = face.intersect(ray);
+            if (hit != null && isInBox(ray, hit)) {
+                if (min == null) {
+                    min = hit;
+                } else if (hit.compareTo(min) < 0) {
+                    min = hit;
+                }
             }
         }
+        return min;
     }
 }
-

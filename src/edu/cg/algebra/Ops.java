@@ -100,18 +100,18 @@ public class Ops {
 		double dot = dot(neg(u), normal);
 		dot *= dot;
 		if(n1 > n2) {
-			double criticalAngle = n2 / n1;
-			criticalAngle *= criticalAngle;
-			if(1 - dot >= criticalAngle)
+			double angle = n2 / n1;
+			angle *= angle;
+			if(1 - dot >= angle)
 				return reflect(u, normal);
 		}
 		
-		Vec b = add(u, mult(dot(neg(u), normal), normal));
-		b = normalize(b);
-		double sin2Theta2 = (n1 * n1 * (1-dot)) / (n2*n2);
-		double cos2Theta2 = 1 - sin2Theta2;
-		double sinTheta2 = Math.sqrt(sin2Theta2);
-		double cosTheta2 = Math.sqrt(cos2Theta2);
-		return add(mult(-cosTheta2, normal), mult(sinTheta2, b));
+		Vec vec = add(u, mult(dot(neg(u), normal), normal));
+		vec = normalize(vec);
+		double sin2 = ((n1*n1) * (1-dot)) / (n2*n2);
+		double cos2 = 1 - sin2;
+		double sin = Math.sqrt(sin2);
+		double cos = Math.sqrt(cos2);
+		return add(mult(-cos, normal), mult(sin, vec));
 	}
 }

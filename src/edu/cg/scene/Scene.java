@@ -174,23 +174,18 @@ public class Scene {
 	}
 	
 	private Future<Color> calcColor(int x, int y) {
-        return this.executor.submit(() -> {
-            Point point = this.camera.transform(x, y);
-            Vec color = new Vec(0.0);
-            Ray ray = new Ray(this.camera.getCameraPosition(), point);
-            color = color.add(this.calcColor(ray, 0));
-            double pixelLength = this.camera.getPixelLength();
-            Vec upVec = this.camera.getUpVec();
-            Vec rightVec = this.camera.getRightVec();
-            for (int i = 0; i < this.antiAliasingFactor - 1; i++) {
-                double dx = (Math.random() - 0.5) * pixelLength;
-                double dy = (Math.random() - 0.5) * pixelLength;
-                Point newPoint = point.add(rightVec.mult(dx)).add(upVec.mult(dy));
-                Ray newRay = new Ray(this.camera.getCameraPosition(), newPoint);
-                color = color.add(this.calcColor(newRay, 0));
-            }
-            return color.mult(1.0 / this.antiAliasingFactor).toColor();
-        });
+        return executor.submit(() -> {
+			Point pointOnScreen = camera.transform(x, y);
+			Vec color = new Vec(0.0);
+
+			Ray ray = new Ray(camera.getCameraPosition(), pointOnScreen);
+			color = color.add(calcColor(ray, 0));
+
+			return color.toColor();
+			// TODO: change this method for AntiAliasing bonus
+			//		You need to shoot antiAliasingFactor-1 additional rays through the pixel return the average color of
+			//      all rays.
+		});
 	}
 	
 	private Vec calcColor(Ray ray, int recursionLevel) {
